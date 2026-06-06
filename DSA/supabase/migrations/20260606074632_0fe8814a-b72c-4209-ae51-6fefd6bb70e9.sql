@@ -1,0 +1,1 @@
+GRANT ALL ON public.cw_questions TO sandbox_exec;
