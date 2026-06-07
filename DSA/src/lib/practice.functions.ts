@@ -103,14 +103,56 @@ export const generatePracticeQuestions = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Output strict JSON only. Schema: {\"questions\":[string]}" },
-          { role: "user", content: `Generate ${data.count} ${data.difficulty} coding interview questions on "${data.topic}". Concise, one per item.` },
+          { role: "system", content: "Output strict JSON only. Return only valid JSON with no markdown fences." },
+          { role: "user", content: `Generate ${data.count} ${data.difficulty} coding interview practice questions on \"${data.topic}\". Return strict JSON matching this schema:
+{
+  "questions": [
+    {
+      "title": "Question title",
+      "statement": "Detailed problem statement with input/output formatting and what the solver should compute.",
+      "constraints": "Input limits, output limits, time/memory guidance.",
+      "examples": [
+        {"input": "sample input", "output": "sample output", "explanation": "Why this example matters."}
+      ]
+    }
+  ]
+}
+Provide concise titles and at least one example for each question.` },
         ],
       }),
     });
     const j = await r.json() as any;
     let txt = j.choices?.[0]?.message?.content ?? "{}";
     txt = txt.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
-    try { return { questions: JSON.parse(txt).questions ?? [] }; }
-    catch { return { questions: [] }; }
+
+    const normalizeExample = (ex: any) => ({
+      input: String(ex?.input ?? ex?.stdin ?? "").trim(),
+      output: String(ex?.output ?? ex?.expected ?? "").trim(),
+      explanation: String(ex?.explanation ?? ex?.explanation ?? "").trim(),
+    });
+
+    const normalizeQuestion = (item: any) => ({
+      title: String(item?.title ?? "").trim(),
+      statement: String(item?.statement ?? item?.title ?? "").trim(),
+      constraints: String(item?.constraints ?? "").trim(),
+      examples: Array.isArray(item?.examples) ? item.examples.map(normalizeExample).filter((ex) => ex.input && ex.output) : [],
+    });
+
+    try {
+      const parsed = JSON.parse(txt);
+      const rawQuestions = Array.isArray(parsed.questions) ? parsed.questions : Array.isArray(parsed) ? parsed : [];
+      const questions = rawQuestions.map(normalizeQuestion).filter((q) => q.title);
+      return { questions };
+    } catch {
+      // fallback for old format or malformed JSON
+      try {
+        const parsed = JSON.parse(txt);
+        if (Array.isArray(parsed)) {
+          return { questions: parsed.map((title: any) => ({ title: String(title).trim(), statement: String(title).trim(), constraints: "", examples: [] })).filter((q) => q.title) };
+        }
+      } catch {
+        // ignore
+      }
+      return { questions: [] };
+    }
   });

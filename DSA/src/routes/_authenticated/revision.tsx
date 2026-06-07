@@ -246,6 +246,11 @@ function RevisionPage() {
   // problem data (AI-generated)
   const [problemData, setProblemData] = useState<{ title: string; description: string; functionSig: string; constraints: string; examples: any[] } | null>(null);
 
+  // start / open IDE state
+  const [startingFileId, setStartingFileId] = useState<string | null>(null);
+  const [startStep, setStartStep] = useState<number>(0);
+  const startIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // tests
   const [tests, setTests] = useState<{ public: any[]; hidden: any[] } | null>(null);
   const [genLoading, setGenLoading] = useState(false);
@@ -319,6 +324,15 @@ ${(file.content || "").slice(0, 2000)}`,
   }, [session, summary]);
 
   async function handleStart(file: FileRow) {
+    setStartingFileId(file.id);
+    setStartStep(1);
+    if (startIntervalRef.current) {
+      clearInterval(startIntervalRef.current);
+    }
+    startIntervalRef.current = setInterval(() => {
+      setStartStep((current) => (current >= 3 ? 1 : current + 1));
+    }, 700);
+
     try {
       const detected = detectLang(file.name, file.language);
       
@@ -381,6 +395,13 @@ ${(file.content || "").slice(0, 2000)}`,
       setTab("problem");
     } catch (e: any) { 
       toast.error(`Error starting revision: ${e.message}`);
+    } finally {
+      if (startIntervalRef.current) {
+        clearInterval(startIntervalRef.current);
+        startIntervalRef.current = null;
+      }
+      setStartingFileId(null);
+      setStartStep(0);
     }
   }
 
@@ -499,8 +520,17 @@ ${(file.content || "").slice(0, 2000)}`,
                     <div className="text-xs text-slate-500">{f.language} · {(f.content || "").length} chars</div>
                   </div>
                   <button onClick={() => handleStart(f)}
-                    className="rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 inline-flex items-center gap-1 shrink-0">
-                    <Play size={12} /> Start in IDE
+                    disabled={startingFileId === f.id}
+                    className={`rounded text-white text-xs px-3 py-1.5 inline-flex items-center gap-1 shrink-0 ${startingFileId === f.id ? "bg-slate-600 cursor-wait" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                    {startingFileId === f.id ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" /> Opening {startStep}
+                      </>
+                    ) : (
+                      <>
+                        <Play size={12} /> Start in IDE
+                      </>
+                    )}
                   </button>
                 </li>
               ))}
