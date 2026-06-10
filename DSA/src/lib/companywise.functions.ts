@@ -31,6 +31,7 @@ export const cwList = createServerFn({ method: "GET" })
       search: z.string().max(200).optional(),
       difficulty: z.enum(["Easy", "Medium", "Hard"]).optional(),
       company: z.string().max(100).optional(),
+      topic: z.string().max(100).optional(),
       limit: z.number().min(1).max(200).default(50),
       offset: z.number().min(0).default(0),
     }).parse(i),

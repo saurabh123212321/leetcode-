@@ -26,6 +26,7 @@ function LeetCodePage() {
   const [diff, setDiff] = useState<"" | "Easy" | "Medium" | "Hard">("");
   const [search, setSearch] = useState("");
   const [company, setCompany] = useState("");
+  const [topic, setTopic] = useState("");
   const [skip, setSkip] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -39,6 +40,7 @@ function LeetCodePage() {
         difficulty: diff || undefined,
         search: search || undefined,
         company: company || undefined,
+        topic: topic || undefined,
       } });
       setRows(r.rows); setTotal(r.total); setSkip(nextSkip);
     } catch (e: any) { setErr(e?.message ?? "Failed"); setRows([]); }
@@ -82,6 +84,10 @@ function LeetCodePage() {
           onKeyDown={(e) => e.key === "Enter" && load(0)}
           placeholder="Company (e.g. amazon)"
           className="bg-slate-800 text-slate-100 text-sm rounded px-3 py-2 border border-slate-700 w-48" />
+        <input value={topic} onChange={(e) => setTopic(e.target.value.toLowerCase())}
+          onKeyDown={(e) => e.key === "Enter" && load(0)}
+          placeholder="Topic (e.g. array)"
+          className="bg-slate-800 text-slate-100 text-sm rounded px-3 py-2 border border-slate-700 w-48" />
         <select value={diff} onChange={(e) => setDiff(e.target.value as any)}
           className="bg-slate-800 text-slate-100 text-sm rounded px-3 py-2 border border-slate-700">
           <option value="">All difficulties</option>
@@ -107,12 +113,15 @@ function LeetCodePage() {
             <div className="col-span-1">Difficulty</div>
             <div className="col-span-1">Accept.</div>
             <div className="col-span-1">Freq.</div>
-            <div className="col-span-4">Companies</div>
+            <div className="col-span-2">Topic</div>
+            <div className="col-span-2">Companies</div>
           </div>
           {rows.length === 0 && !err && <div className="p-4 text-slate-400 text-sm">No questions found.</div>}
           {rows.map((q) => {
-            const shown = q.companies.slice(0, 5);
-            const extra = q.companies.length - shown.length;
+            const shownCompanies = q.companies.slice(0, 4);
+            const companyExtra = q.companies.length - shownCompanies.length;
+            const shownTopics = (q.topics ?? []).slice(0, 3);
+            const topicExtra = (q.topics ?? []).length - shownTopics.length;
             return (
               <div key={q.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-3 border-b border-slate-800/60 hover:bg-slate-800/40">
                 <div className="md:col-span-1 text-slate-500 text-sm">{q.id}</div>
@@ -124,17 +133,31 @@ function LeetCodePage() {
                 <div className={`md:col-span-1 text-xs font-semibold ${diffColor[q.difficulty] ?? ""}`}>{q.difficulty}</div>
                 <div className="md:col-span-1 text-xs text-slate-400">{q.acceptance != null ? `${Number(q.acceptance).toFixed(1)}%` : ""}</div>
                 <div className="md:col-span-1 text-xs text-slate-400">{q.frequency_max != null ? `${Number(q.frequency_max).toFixed(1)}%` : ""}</div>
-                <div className="md:col-span-4 flex flex-wrap gap-1">
-                  {shown.map((c: string) => (
+                <div className="md:col-span-2 flex flex-wrap gap-1">
+                  {shownTopics.map((t: string) => (
+                    <button key={t} onClick={() => { setTopic(t); setCompany(""); load(0); }}
+                      className="text-[10px] lowercase bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full px-2 py-0.5 border border-slate-700">
+                      {t}
+                    </button>
+                  ))}
+                  {topicExtra > 0 && (
+                    <button onClick={() => setTopic((q.topics ?? [])[0] ?? "")}
+                      className="text-[10px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-full px-2 py-0.5 border border-indigo-500/40">
+                      +{topicExtra} more
+                    </button>
+                  )}
+                </div>
+                <div className="md:col-span-2 flex flex-wrap gap-1">
+                  {shownCompanies.map((c: string) => (
                     <button key={c} onClick={() => { setCompany(c); load(0); }}
                       className="text-[10px] capitalize bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full px-2 py-0.5 border border-slate-700">
                       {c}
                     </button>
                   ))}
-                  {extra > 0 && (
+                  {companyExtra > 0 && (
                     <button onClick={() => setModal({ title: q.title, companies: q.companies })}
                       className="text-[10px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-full px-2 py-0.5 border border-indigo-500/40">
-                      +{extra} more
+                      +{companyExtra} more
                     </button>
                   )}
                 </div>

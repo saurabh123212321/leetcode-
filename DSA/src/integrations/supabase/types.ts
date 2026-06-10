@@ -250,6 +250,7 @@ export type Database = {
           id: number
           slug: string
           title: string
+          topics: string[]
           updated_at: string
           url: string
         }
@@ -263,6 +264,7 @@ export type Database = {
           id: number
           slug: string
           title: string
+          topics?: string[]
           updated_at?: string
           url: string
         }
@@ -276,6 +278,7 @@ export type Database = {
           id?: number
           slug?: string
           title?: string
+          topics?: string[]
           updated_at?: string
           url?: string
         }
